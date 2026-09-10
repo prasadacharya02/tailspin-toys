@@ -27,7 +27,7 @@ test.describe('Game Listing and Navigation', () => {
   test('should filter games by category and publisher together', async ({ page }) => {
     await test.step('Navigate to homepage and apply a category and publisher filter', async () => {
       await page.goto('/');
-      await page.getByRole('checkbox', { name: 'Strategy' }).check();
+      await page.getByTestId('category-filter-checkbox-1').check();
       await page.getByTestId('publisher-filter-select').selectOption({ label: 'CodeForge Studios' });
       await page.getByTestId('apply-filters-button').click();
     });
