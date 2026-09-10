@@ -4,11 +4,23 @@ import GameCard from '../components/GameCard.astro';
 import PageHero from '../components/PageHero.astro';
 import EmptyState from '../components/EmptyState.astro';
 import { getDatabase } from '../lib/db';
-import { getAllGames } from '../lib/games';
+import { getAllCategories, getAllGames, getAllPublishers } from '../lib/games';
 
 export const prerender = true;
 
-const games = await getAllGames(getDatabase());
+const selectedCategoryIds = Astro.url.searchParams
+    .getAll('category')
+    .map((value) => Number.parseInt(value, 10))
+    .filter((value) => Number.isInteger(value));
+const selectedPublisherId = Number.parseInt(Astro.url.searchParams.get('publisher') ?? '', 10);
+const hasExplicitPublisherFilter = Number.isInteger(selectedPublisherId);
+
+const categories = await getAllCategories(getDatabase());
+const publishers = await getAllPublishers(getDatabase());
+const games = await getAllGames(getDatabase(), {
+    categoryIds: selectedCategoryIds.length > 0 ? selectedCategoryIds : undefined,
+    publisherId: hasExplicitPublisherFilter ? selectedPublisherId : undefined,
+});
 ---
 
 <Layout title="Tailspin Toys - Crowdfunding your new favorite game!">
@@ -18,11 +30,75 @@ const games = await getAllGames(getDatabase());
       subtitle="Find your next game! And maybe even back one! Explore our collection!"
     />
 
+    <div class="mb-8 rounded-2xl border border-slate-700 bg-slate-800/60 p-6 shadow-lg" data-testid="game-filters">
+      <form method="get" class="space-y-5">
+        <fieldset>
+          <legend class="mb-3 text-sm font-medium uppercase tracking-wide text-slate-300">Filter by category</legend>
+          <div class="flex flex-wrap gap-3">
+            {categories.map((category) => (
+              <label
+                class="inline-flex items-center gap-2 rounded-full border border-slate-600 bg-slate-900 px-3 py-2 text-sm text-slate-200 transition-colors hover:border-blue-500/60 focus-within:ring-2 focus-within:ring-blue-500 focus-within:outline-none"
+                data-testid={`category-filter-${category.id}`}
+              >
+                <input
+                  type="checkbox"
+                  name="category"
+                  value={category.id}
+                  checked={selectedCategoryIds.includes(category.id)}
+                  class="h-4 w-4 rounded border-slate-600 bg-slate-900 text-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  data-testid={`category-filter-checkbox-${category.id}`}
+                  aria-label={`Filter by ${category.name}`}
+                />
+                <span>{category.name}</span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <label class="block w-full sm:max-w-xs" for="publisher-filter">
+            <span class="mb-2 block text-sm font-medium uppercase tracking-wide text-slate-300">Filter by publisher</span>
+            <select
+              id="publisher-filter"
+              name="publisher"
+              class="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-slate-100 shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              data-testid="publisher-filter-select"
+              aria-label="Filter by publisher"
+            >
+              <option value="">All publishers</option>
+              {publishers.map((publisher) => (
+                <option selected={selectedPublisherId === publisher.id} value={publisher.id}>
+                  {publisher.name}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <div class="flex items-center gap-3">
+            <a
+              href="/"
+              class="inline-flex items-center rounded-lg border border-slate-600 px-4 py-2 text-sm font-medium text-slate-200 hover:bg-slate-700 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              data-testid="clear-filters-button"
+            >
+              Clear filters
+            </a>
+            <button
+              type="submit"
+              class="inline-flex items-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              data-testid="apply-filters-button"
+            >
+              Apply filters
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+
     <div>
       <h2 class="text-2xl font-medium mb-6 text-slate-100">Featured Games</h2>
 
       {games.length === 0 ? (
-        <EmptyState text="No games available at the moment." />
+        <EmptyState text="No games match the current filters." />
       ) : (
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" data-testid="games-grid">
           {games.map((game) => <GameCard game={game} />)}
