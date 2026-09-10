@@ -27,13 +27,13 @@ test.describe('Game Listing and Navigation', () => {
   test('should filter games by category and publisher together', async ({ page }) => {
     await test.step('Navigate to homepage and apply a category and publisher filter', async () => {
       await page.goto('/');
-      await page.getByRole('checkbox', { name: 'Strategy' }).check();
+      await page.getByTestId('category-filter-checkbox-1').check();
       await page.getByTestId('publisher-filter-select').selectOption({ label: 'CodeForge Studios' });
       await page.getByTestId('apply-filters-button').click();
     });
 
     await test.step('Verify only matching games remain visible', async () => {
-      const gameCards = page.getByTestId('game-card');
+      const gameCards = page.locator('[data-testid="game-card"]:visible');
       await expect(gameCards).toHaveCount(1);
       await expect(gameCards.first()).toContainText('DevOps Dominion');
       await expect(page.getByText('No games match the current filters.')).not.toBeVisible();

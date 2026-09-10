@@ -8,19 +8,9 @@ import { getAllCategories, getAllGames, getAllPublishers } from '../lib/games';
 
 export const prerender = true;
 
-const selectedCategoryIds = Astro.url.searchParams
-    .getAll('category')
-    .map((value) => Number.parseInt(value, 10))
-    .filter((value) => Number.isInteger(value));
-const selectedPublisherId = Number.parseInt(Astro.url.searchParams.get('publisher') ?? '', 10);
-const hasExplicitPublisherFilter = Number.isInteger(selectedPublisherId);
-
 const categories = await getAllCategories(getDatabase());
 const publishers = await getAllPublishers(getDatabase());
-const games = await getAllGames(getDatabase(), {
-    categoryIds: selectedCategoryIds.length > 0 ? selectedCategoryIds : undefined,
-    publisherId: hasExplicitPublisherFilter ? selectedPublisherId : undefined,
-});
+const games = await getAllGames(getDatabase());
 ---
 
 <Layout title="Tailspin Toys - Crowdfunding your new favorite game!">
@@ -44,7 +34,6 @@ const games = await getAllGames(getDatabase(), {
                   type="checkbox"
                   name="category"
                   value={category.id}
-                  checked={selectedCategoryIds.includes(category.id)}
                   class="h-4 w-4 rounded border-slate-600 bg-slate-900 text-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                   data-testid={`category-filter-checkbox-${category.id}`}
                   aria-label={`Filter by ${category.name}`}
@@ -67,7 +56,7 @@ const games = await getAllGames(getDatabase(), {
             >
               <option value="">All publishers</option>
               {publishers.map((publisher) => (
-                <option selected={selectedPublisherId === publisher.id} value={publisher.id}>
+                <option value={publisher.id}>
                   {publisher.name}
                 </option>
               ))}
@@ -104,6 +93,75 @@ const games = await getAllGames(getDatabase(), {
           {games.map((game) => <GameCard game={game} />)}
         </div>
       )}
+      <div class="hidden" data-testid="filtered-empty-state">
+        <EmptyState text="No games match the current filters." />
+      </div>
     </div>
   </div>
 </Layout>
+
+<script>
+    const form = document.querySelector<HTMLFormElement>('[data-testid="game-filters"] form');
+    const cards = [...document.querySelectorAll<HTMLElement>('[data-testid="game-card"]')];
+    const grid = document.querySelector<HTMLElement>('[data-testid="games-grid"]');
+    const emptyState = document.querySelector<HTMLElement>('[data-testid="filtered-empty-state"]');
+
+    if (form && grid && emptyState) {
+        const categoryInputs = [...form.querySelectorAll<HTMLInputElement>('input[name="category"]')];
+        const publisherInput = form.querySelector<HTMLSelectElement>('select[name="publisher"]');
+
+        const applyFilters = (): void => {
+            const selectedCategories = new Set(
+                categoryInputs.filter((input) => input.checked).map((input) => input.value),
+            );
+            const selectedPublisher = publisherInput?.value ?? '';
+            let visibleCards = 0;
+
+            cards.forEach((card) => {
+                const matchesCategory =
+                    selectedCategories.size === 0 ||
+                    selectedCategories.has(card.dataset.gameCategoryId ?? '');
+                const matchesPublisher =
+                    selectedPublisher === '' ||
+                    card.dataset.gamePublisherId === selectedPublisher;
+                const isVisible = matchesCategory && matchesPublisher;
+
+                card.classList.toggle('hidden', !isVisible);
+                visibleCards += isVisible ? 1 : 0;
+            });
+
+            grid.classList.toggle('hidden', visibleCards === 0);
+            emptyState.classList.toggle('hidden', visibleCards !== 0);
+        };
+
+        const syncUrl = (): void => {
+            const params = new URLSearchParams();
+            categoryInputs.filter((input) => input.checked).forEach((input) => {
+                params.append('category', input.value);
+            });
+            if (publisherInput?.value) {
+                params.set('publisher', publisherInput.value);
+            }
+
+            const query = params.toString();
+            window.history.replaceState(null, '', query ? `/?${query}` : '/');
+        };
+
+        form.addEventListener('submit', (event) => {
+            event.preventDefault();
+            syncUrl();
+            applyFilters();
+        });
+        form.addEventListener('change', applyFilters);
+
+        const params = new URLSearchParams(window.location.search);
+        const selectedCategories = new Set(params.getAll('category'));
+        categoryInputs.forEach((input) => {
+            input.checked = selectedCategories.has(input.value);
+        });
+        if (publisherInput) {
+            publisherInput.value = params.get('publisher') ?? '';
+        }
+        applyFilters();
+    }
+</script>
