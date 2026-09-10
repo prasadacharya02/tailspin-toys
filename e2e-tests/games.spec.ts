@@ -33,7 +33,7 @@ test.describe('Game Listing and Navigation', () => {
     });
 
     await test.step('Verify only matching games remain visible', async () => {
-      const gameCards = page.getByTestId('game-card');
+      const gameCards = page.locator('[data-testid="game-card"]:visible');
       await expect(gameCards).toHaveCount(1);
       await expect(gameCards.first()).toContainText('DevOps Dominion');
       await expect(page.getByText('No games match the current filters.')).not.toBeVisible();
