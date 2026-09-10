@@ -20,6 +20,12 @@ Refer to technology-specific instruction files:
 
 ## Core Principles
 
+### Comments and Documentation
+
+- Write comments to explain **why** code exists, the intent behind a decision, or an important constraint. Do not restate what the code already makes obvious.
+- Keep comments close to the code they explain and update or remove them whenever the related behavior changes. An outdated comment is a bug.
+- Prefer TSDoc/JSDoc for public APIs and component contracts; use inline comments only for non-obvious implementation details.
+
 ### Testability
 
 - Every interactive element MUST include a `data-testid` attribute
@@ -50,6 +56,13 @@ Refer to technology-specific instruction files:
 - Keep components focused on a single responsibility
 - Use props for configuration, not duplication
 - Document component APIs with TypeScript types
+- Every reusable `.astro` component must define and document its `Props` interface, including what each prop controls and any defaults or constraints
+
+### TypeScript Formatting
+
+- Use four-space indentation, semicolons, double quotes, and trailing commas in multiline lists and objects.
+- Prefer explicit parameter and return types for exported functions and public helpers.
+- ESLint enforces explicit module-boundary types; run `npm run lint` after TypeScript or Astro changes. Keep the documented formatting conventions consistent when editing files.
 
 ## Development Workflow
 
